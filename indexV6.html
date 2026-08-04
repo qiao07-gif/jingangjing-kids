@@ -6578,6 +6578,17 @@ function addPts(n){
   if(!S.dayInfo || S.dayInfo.date !== td){ S.dayInfo = {date:td, pts:0}; }
   S.dayInfo.pts += n;
 }
+// ★ V6.6o：答对累计智慧莲花 + 点亮瞬间正反馈（每满 5 题弹 toast + 轻音效）
+function bumpCorrect(){
+  S.correctTotal = (S.correctTotal||0)+1;
+  if(S.correctTotal % 5 === 0) lotusPop();
+  save();
+}
+function lotusPop(){
+  toast("🌼 点亮一朵智慧莲花！");
+  playSound("char");
+  vibrate(18);
+}
 if(!["windchime","leaves","drop","starbell"].includes(S.sound)) S.sound = "windchime";   // ★ 2026-08-02 老存档音效兼容（颂钵/木鱼已移除）
 // ★ V6 M1 迁移（幂等）：老存档 S.done → S.r1_done；S.done 作为 R1 别名（R1 代码零改动）
 if(!S.r1_done && S.done) S.r1_done = S.done;
@@ -7307,7 +7318,7 @@ function chooseOpt(btn, i){
   sessionPts += pts; addPts(pts);
   if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+pts;
   // ★ V6.6n：答对累计智慧莲花（每答对 5 题点亮日签卡一朵，跨轮次只增不减）
-  if(good) S.correctTotal = (S.correctTotal||0)+1;
+  if(good) bumpCorrect();
   // ★ V6 R2：答对的选项记入活卡素材（智慧卡/问答卡）
   if(S.curRound===2 && good){
     S.r2cards[curPin] = S.r2cards[curPin]||{};
@@ -7456,7 +7467,7 @@ function chooseSticker(btn, i){
   qbox.querySelectorAll(".sticker").forEach(b=>{ b.disabled=true; if(b!==btn) b.classList.add("dim"); });
   btn.classList.add("hit"); btn.classList.add("pop");
   const pts = 15;
-  sessionPts += pts; addPts(pts); S.correctTotal = (S.correctTotal||0)+1;
+  sessionPts += pts; addPts(pts); bumpCorrect();
   if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+pts;
   S.r4cards[curPin] = S.r4cards[curPin]||{};
   S.r4cards[curPin]["q"+(i+1)] = btn.textContent.trim();
@@ -7493,7 +7504,7 @@ function chooseLightboard(btn, i, k){
   const board = qbox.querySelector(".board");
   if(board){ board.classList.add("boardlit"); setTimeout(()=>board.classList.remove("boardlit"), 650); }
   const pts = 15;
-  sessionPts += pts; addPts(pts); S.correctTotal = (S.correctTotal||0)+1;
+  sessionPts += pts; addPts(pts); bumpCorrect();
   if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+pts;
   S.r4cards[curPin] = S.r4cards[curPin]||{};
   S.r4cards[curPin]["q"+(i+1)] = q.answerWord||"";
@@ -8893,7 +8904,7 @@ function roleCardSVG(p){
   </svg>`;
 }
 // ★ V5.1 分享卡（日签式 · 朋友圈美学）：身份表达 + 成就感 + 审美 + 传播入口
-//   V6.6n：方案C 重构——成就三项改左栏红色印章竖排（印泥感）+ 智慧莲花 7 槽；底部全固定（今日一句/今日收获/署名/扫码/二维码），与金句长度解耦；GAP 公式计入 BOXPAD 修根因（任意长度句子不再与底部重叠）
+//   V6.6o：成就三项改右栏小印章竖排（印泥感·小字体·顺金句往下）；智慧莲花7槽移左下、去文字仅留🌼图标+极小 X/7；GAP计BOXPAD根因不变；底部全固定；另加 bumpCorrect/lotusPop（每答对满5题弹"🌼点亮一朵智慧莲花"+轻音效，网页即时正反馈）
 function shareCardSVG(p){
   const W=1080, H=1920;
   const nick=(S.nick||"小书童").replace(/[<>&]/g,"");
@@ -8922,11 +8933,11 @@ function shareCardSVG(p){
   const gb = ghostQuoteBlock(quote, W/2, midY, SZ, GAP, BOXW, BOXPAD);  // ★ 复用四轮公共金骨架
   const chars = gb.svg;
   // ★ V6.6n：红色印泥感印章（成就三项）
-  const seal = (y, icon, txt)=>`<g transform="translate(205,${y})">
-      <rect x="-95" y="-34" width="190" height="66" rx="10" fill="#b03a2e" opacity=".10"/>
-      <rect x="-91" y="-30" width="182" height="58" rx="8" fill="none" stroke="#b03a2e" stroke-width="2.5" opacity=".8"/>
-      <text x="-52" y="10" text-anchor="middle" font-size="30">${icon}</text>
-      <text x="14" y="12" text-anchor="middle" font-size="25" fill="#8f2b1f" font-family="'KaiTi',serif">${txt}</text>
+  const seal = (y, icon, txt)=>`<g transform="translate(882,${y})">
+      <rect x="-74" y="-27" width="148" height="54" rx="9" fill="#b03a2e" opacity=".10"/>
+      <rect x="-71" y="-24" width="142" height="48" rx="7" fill="none" stroke="#b03a2e" stroke-width="2" opacity=".8"/>
+      <text x="-42" y="7" text-anchor="middle" font-size="22">${icon}</text>
+      <text x="8" y="8" text-anchor="middle" font-size="19" fill="#8f2b1f" font-family="'KaiTi',serif">${txt}</text>
     </g>`;
   // ★ V6.6n：智慧莲花（亮=金实心 / 暗=浅灰轮廓）
   const lotus = (x, lit)=>`<g transform="translate(${x},0)">
@@ -8956,12 +8967,12 @@ function shareCardSVG(p){
   <!-- 日签感：当日字体句 -->
   ${chars}
   <!-- 左栏：三枚印章成就（印泥感）+ 智慧莲花 -->
-  ${seal(382,"🏅","连续 "+days+" 天")}
-  ${seal(474,"📚","已集 "+doneN+"/32 品")}
-  ${seal(566,"✨",S.points+" 分")}
-  <text x="205" y="700" text-anchor="middle" font-size="24" fill="#8a6a45" font-family="'KaiTi',serif" letter-spacing="3">🌼 智慧莲花</text>
-  <g transform="translate(0,734)">${lotusRow}</g>
-  <text x="205" y="792" text-anchor="middle" font-size="19" fill="#a08a68" font-family="'KaiTi',serif">每答对 5 题点亮一朵 · ${lotusLit}/7</text>
+  ${seal(410,"🏅","连续 "+days+" 天")}
+  ${seal(500,"📚","已集 "+doneN+"/32 品")}
+  ${seal(590,"✨",S.points+" 分")}
+  <text x="206" y="700" text-anchor="middle" font-size="30">🌼</text>
+  <g transform="translate(0,742)">${lotusRow}</g>
+  <text x="206" y="794" text-anchor="middle" font-size="17" fill="#a08a68" font-family="'KaiTi',serif">${lotusLit}/7</text>
   <!-- 底部固定区（固定坐标，不随金句长度浮动） -->
   <line x1="200" y1="1330" x2="${W-200}" y2="1330" stroke="${colD}" stroke-width="3" opacity=".5"/>
   <text x="${W/2}" y="1398" text-anchor="middle" font-size="30" fill="#8a6a45" font-family="'KaiTi',serif" letter-spacing="4">${dayLine}</text>
