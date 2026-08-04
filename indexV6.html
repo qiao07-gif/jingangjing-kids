@@ -8905,6 +8905,7 @@ function roleCardSVG(p){
 }
 // ★ V5.1 分享卡（日签式 · 朋友圈美学）：身份表达 + 成就感 + 审美 + 传播入口
 //   V6.6o：成就三项改右栏小印章竖排（印泥感·小字体·顺金句往下）；智慧莲花7槽移左下、去文字仅留🌼图标+极小 X/7；GAP计BOXPAD根因不变；底部全固定；另加 bumpCorrect/lotusPop（每答对满5题弹"🌼点亮一朵智慧莲花"+轻音效，网页即时正反馈）
+//   V6.6p：成就三项去红印章→淡金细圈底+淡褐字(#a08a68)；左下莲花改纯装饰淡花(去X/7进度、与correctTotal解绑，"互动有趣"由网页答题机制承担)；其余不变
 function shareCardSVG(p){
   const W=1080, H=1920;
   const nick=(S.nick||"小书童").replace(/[<>&]/g,"");
@@ -8932,22 +8933,22 @@ function shareCardSVG(p){
   const midY = Math.round((zoneTop+zoneBot)/2);
   const gb = ghostQuoteBlock(quote, W/2, midY, SZ, GAP, BOXW, BOXPAD);  // ★ 复用四轮公共金骨架
   const chars = gb.svg;
-  // ★ V6.6n：红色印泥感印章（成就三项）
+  // ★ V6.6p：成就三项去红印章 → 淡金细圈底 + 淡褐字（呼应"淡色字体、不要红书"）
   const seal = (y, icon, txt)=>`<g transform="translate(882,${y})">
-      <rect x="-74" y="-27" width="148" height="54" rx="9" fill="#b03a2e" opacity=".10"/>
-      <rect x="-71" y="-24" width="142" height="48" rx="7" fill="none" stroke="#b03a2e" stroke-width="2" opacity=".8"/>
-      <text x="-42" y="7" text-anchor="middle" font-size="22">${icon}</text>
-      <text x="8" y="8" text-anchor="middle" font-size="19" fill="#8f2b1f" font-family="'KaiTi',serif">${txt}</text>
+      <rect x="-74" y="-27" width="148" height="54" rx="9" fill="#c9a227" opacity=".08"/>
+      <rect x="-71" y="-24" width="142" height="48" rx="7" fill="none" stroke="#c9a227" stroke-width="1.5" opacity=".35"/>
+      <text x="-42" y="7" text-anchor="middle" font-size="20">${icon}</text>
+      <text x="8" y="8" text-anchor="middle" font-size="18" fill="#a08a68" font-family="'KaiTi',serif">${txt}</text>
     </g>`;
-  // ★ V6.6n：智慧莲花（亮=金实心 / 暗=浅灰轮廓）
-  const lotus = (x, lit)=>`<g transform="translate(${x},0)">
-      <ellipse cx="0" cy="-10" rx="6.5" ry="11" fill="${lit?"#c9a227":"#e9e0c8"}" stroke="#c9a227" stroke-width="1.5" opacity="${lit?1:.95}"/>
-      <ellipse cx="-8" cy="-1" rx="6.5" ry="11" fill="${lit?"#d8b13c":"#efe7d2"}" stroke="#c9a227" stroke-width="1.5" opacity="${lit?1:.95}"/>
-      <ellipse cx="8" cy="-1" rx="6.5" ry="11" fill="${lit?"#d8b13c":"#efe7d2"}" stroke="#c9a227" stroke-width="1.5" opacity="${lit?1:.95}"/>
-      <circle cx="0" cy="-3" r="4.2" fill="#f2e2b0"/>
+  // ★ V6.6p：左下莲花改纯装饰淡花（不再展示收集进度；"互动有趣"交由网页答题机制承担）
+  const decLotus = (x)=>`<g transform="translate(${x},0)">
+      <ellipse cx="0" cy="-10" rx="6.5" ry="11" fill="#e6cf8a" stroke="#c9a227" stroke-width="1.2" opacity=".85"/>
+      <ellipse cx="-8" cy="-1" rx="6.5" ry="11" fill="#ecd79a" stroke="#c9a227" stroke-width="1.2" opacity=".85"/>
+      <ellipse cx="8" cy="-1" rx="6.5" ry="11" fill="#ecd79a" stroke="#c9a227" stroke-width="1.2" opacity=".85"/>
+      <circle cx="0" cy="-3" r="4" fill="#f2e2b0"/>
     </g>`;
-  let lotusRow="";
-  for(let k=0;k<7;k++) lotusRow += lotus(128+k*26, k<lotusLit);
+  let decRow="";
+  for(let k=0;k<5;k++) decRow += decLotus(150+k*26);
   const dayLine = dayPts>0 ? `今日一句 · ${dstr} · ✨ 今日收获 +${dayPts} 分` : `今日一句 · ${dstr}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="card-svg share-svg">
   <defs>
@@ -8971,8 +8972,7 @@ function shareCardSVG(p){
   ${seal(500,"📚","已集 "+doneN+"/32 品")}
   ${seal(590,"✨",S.points+" 分")}
   <text x="206" y="700" text-anchor="middle" font-size="30">🌼</text>
-  <g transform="translate(0,742)">${lotusRow}</g>
-  <text x="206" y="794" text-anchor="middle" font-size="17" fill="#a08a68" font-family="'KaiTi',serif">${lotusLit}/7</text>
+  <g transform="translate(0,742)">${decRow}</g>
   <!-- 底部固定区（固定坐标，不随金句长度浮动） -->
   <line x1="200" y1="1330" x2="${W-200}" y2="1330" stroke="${colD}" stroke-width="3" opacity=".5"/>
   <text x="${W/2}" y="1398" text-anchor="middle" font-size="30" fill="#8a6a45" font-family="'KaiTi',serif" letter-spacing="4">${dayLine}</text>
