@@ -27,3 +27,13 @@ _r4test.js
 # ===== 系统/编辑器 =====
 .DS_Store
 Thumbs.db
+
+# ===== 预览 / 调试 HTML（不入库）=====
+*预览*.html
+*效果*.html
+*复用稿*.html
+*对比*.html
+*新效果*.html
+探卷V6-*.html
+第1品金句卡-*.html
+心经*.html
