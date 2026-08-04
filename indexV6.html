@@ -18,6 +18,7 @@
   V6.6g = V6.6f + 金色笔画骨架试点（2026-08-03）：① 描完底字重绘改为「金色笔画骨架」（原为金色系统楷体字）；② 第 1 品金句卡改「白字帖框 + 米字格 + 金色笔画骨架字」（竖排四字各配田字格，纯数据渲染）；③ 补「座」「坐」两字笔画数据入 CHAR_DATA（源：本地 hanzi-writer-data）
   V6.6h = V6.6g 修订（2026-08-04）：描字面板变色**回退**为 V6.6f 原样（描完底字 = 金色系统楷体字，橙橙反馈描字面板保持原样）；**第 1 品金句卡「白字帖框 + 米字格 + 金色笔画骨架字」保留**（golden 字帖卡只此试点品）；CHAR_DATA 座/坐 补字保留
   V6.6i = V6.6h 修订（2026-08-04）：第1品金句卡金色骨架字放大+垂直居中（橙橙选 字170/框340/字距200）；白框宽写死280→变量BOXW=340、高按字数自适应、整块垂直居中到内容区中线 y=1000；骨架字 buildGhostModel 96→170、米字格104→190、线宽10→12；其余31品旧样式逻辑零改动
+  V6.6n = V6.6m + 日签卡方案C重构（2026-08-04 橙橙拍板）：① GAP 公式迭代计入 BOXPAD 修根因——白框（N*GAP+2*BOXPAD）不再超预留区，任意长度金句不再与底部「今日一句/扫码/署名/二维码」重叠；② 成就三项改左栏红色印章竖排（🏅连续/📚已集/✨积分，印泥感）+ 智慧莲花 7 槽（累计答对/5 点亮）；③ 底部全固定：今日一句+今日收获（S.dayInfo 今日积分跨天重置）/ 署名印章 / 扫码 / 二维码；④ 新增 addPts 统一加分入口（11 处加分区全走它，积分入账逻辑零变化）
   ------------------------------------------------------------
   本文件已内联全部依赖，无需任何外部文件，双击即可运行：
     · Hanzi Writer v2.0.1 (MIT License) —— 笔顺示范动画引擎
@@ -6567,6 +6568,16 @@ function load(){
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
 S.points = S.points||0; S.sound = S.sound||"windchime";
+// ★ V6.6n：今日收获积分（跨天自动重置）+ 智慧莲花计数（累计答对题数，只增不减，老存档兼容）
+S.dayInfo = S.dayInfo||{date:"",pts:0};
+S.correctTotal = S.correctTotal||0;
+// ★ V6.6n：统一加分入口——累计总分 + 今日收获（所有加分区统一走这里，日签卡读 S.dayInfo.pts）
+function addPts(n){
+  S.points = (S.points||0) + n;
+  const td = today();
+  if(!S.dayInfo || S.dayInfo.date !== td){ S.dayInfo = {date:td, pts:0}; }
+  S.dayInfo.pts += n;
+}
 if(!["windchime","leaves","drop","starbell"].includes(S.sound)) S.sound = "windchime";   // ★ 2026-08-02 老存档音效兼容（颂钵/木鱼已移除）
 // ★ V6 M1 迁移（幂等）：老存档 S.done → S.r1_done；S.done 作为 R1 别名（R1 代码零改动）
 if(!S.r1_done && S.done) S.r1_done = S.done;
@@ -6868,7 +6879,7 @@ function buildTaskCard(){
 }
 function claimToday(){
   S.todayBonus = true; const old = S.points||0;
-  S.points += 10; save(); rollPoints(old, S.points); refreshStats(true);
+  addPts(10); save(); rollPoints(old, S.points); refreshStats(true);
   toast("🎉 今日 3 品奖励 +10 分！"); buildTaskCard();
 }
 function goHome(){ buildAch(); refreshStats(); buildRoundSum(); showView("home"); }
@@ -7194,7 +7205,7 @@ function submitFill(btn, i){
     S.r4cards[curPin] = S.r4cards[curPin]||{};
     S.r4cards[curPin]["q"+(i+1)] = vals.join(" ");
   }
-  sessionPts += pts; S.points += pts; save();
+  sessionPts += pts; addPts(pts); save();
   refreshStats(true); playSound("char"); vibrate(18); lotusBurst(10);
   toast("写好啦！+"+pts);
   $("s2score").textContent = `本轮已得 ${sessionPts} 分`;
@@ -7269,7 +7280,7 @@ function submitCreate(btn, i){
     S.works = S.works||[];
     S.works.push({time:Date.now(), pin:curPin, round:3, text:fullText, emojis, star:star?true:false, quote:curQuote(p), season:S.journeySeason||1});   // ★ V6.6f：作品打上旅程季号
   }
-  sessionPts += gain; S.points += gain; save();
+  sessionPts += gain; addPts(gain); save();
   refreshStats(true); playSound(star?"wow":"char"); vibrate(18); lotusBurst(star?26:14);
   toast(star ? "🌟 特别收藏！+20" : "作品收好了！+"+gain);
   // ★ V6.6b：R4 回信送达 → 对方回话气泡（2 秒自动消失，随机变体）
@@ -7293,8 +7304,10 @@ function chooseOpt(btn, i){
   btn.classList.add(good?"pop":"shake");
   const oldPts = S.points;
   const pts = good ? (isRetry ? 3 : (S.curRound===4 ? 12 : (S.curRound===1?10:12))) : 5;   // ★ M3.5：R4 找茬 +12（R1 +10 / R2 +12；贴纸+15 走 chooseSticker）
-  sessionPts += pts; S.points += pts;
+  sessionPts += pts; addPts(pts);
   if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+pts;
+  // ★ V6.6n：答对累计智慧莲花（每答对 5 题点亮日签卡一朵，跨轮次只增不减）
+  if(good) S.correctTotal = (S.correctTotal||0)+1;
   // ★ V6 R2：答对的选项记入活卡素材（智慧卡/问答卡）
   if(S.curRound===2 && good){
     S.r2cards[curPin] = S.r2cards[curPin]||{};
@@ -7443,7 +7456,7 @@ function chooseSticker(btn, i){
   qbox.querySelectorAll(".sticker").forEach(b=>{ b.disabled=true; if(b!==btn) b.classList.add("dim"); });
   btn.classList.add("hit"); btn.classList.add("pop");
   const pts = 15;
-  sessionPts += pts; S.points += pts;
+  sessionPts += pts; addPts(pts); S.correctTotal = (S.correctTotal||0)+1;
   if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+pts;
   S.r4cards[curPin] = S.r4cards[curPin]||{};
   S.r4cards[curPin]["q"+(i+1)] = btn.textContent.trim();
@@ -7480,7 +7493,7 @@ function chooseLightboard(btn, i, k){
   const board = qbox.querySelector(".board");
   if(board){ board.classList.add("boardlit"); setTimeout(()=>board.classList.remove("boardlit"), 650); }
   const pts = 15;
-  sessionPts += pts; S.points += pts;
+  sessionPts += pts; addPts(pts); S.correctTotal = (S.correctTotal||0)+1;
   if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+pts;
   S.r4cards[curPin] = S.r4cards[curPin]||{};
   S.r4cards[curPin]["q"+(i+1)] = q.answerWord||"";
@@ -7507,7 +7520,7 @@ function submitStickerFix(btn, i){
   if(!vals.length){ toast("填一两个词，帮 TA 改对～"); return; }
   qbox.dataset.fixed="1";
   btn.disabled = true; btn.textContent = "改好啦 ✓ +5";
-  sessionPts += 5; S.points += 5; save(); refreshStats(true);
+  sessionPts += 5; addPts(5); save(); refreshStats(true);
   toast("帮 TA 改好啦！+5"); playSound("char"); vibrate(12);
   $("s2score").textContent = `本轮已得 ${sessionPts} 分`;
   checkQuizDone();
@@ -7529,7 +7542,7 @@ function readLightboard(btn, i){
     speechSynthesis.cancel(); speechSynthesis.speak(u);
     const done = ()=>{ if(btn.dataset.got==="1") return; btn.dataset.got="1";
       btn.disabled=true; btn.textContent="已朗读 ✓ +5";
-      sessionPts += 5; S.points += 5;
+      sessionPts += 5; addPts(5);
       if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+5;
       save(); refreshStats(true); playSound("char"); vibrate(12);
       $("s2score").textContent = `本轮已得 ${sessionPts} 分`;
@@ -7569,7 +7582,7 @@ function checkQuizDone(){
   const bonus = S.curRound===4 ? 10 : (all ? qs.length*5 : 0);   // ★ M3：R4 答完即 +10（鼓励为主）；其他轮全对 +5/题
   if(bonus){
     const old = S.points;
-    S.points += bonus; sessionPts += bonus;
+    addPts(bonus); sessionPts += bonus;
     if(S.done[curPin]) S.done[curPin].pts = (S.done[curPin].pts||0)+bonus;
     save(); refreshStats(true); rollPoints(old, S.points);
     $("s2score").textContent = `本轮已得 ${sessionPts} 分`;
@@ -8090,7 +8103,7 @@ function completeTrace(){
     const p = DATA.pins.find(x=>x.pin===curPin);
     const doneMap = curDoneMap();
     let bonus = 0;
-    if(!doneMap[curPin]){ bonus = 20; S.points += bonus; }
+    if(!doneMap[curPin]){ bonus = 20; addPts(bonus); }
     // 连胜
     const td = today();
     if(S.streak.date===td){ /* same day, keep */ }
@@ -8105,7 +8118,7 @@ function completeTrace(){
     updateRoundUnlock(true);
     // ★ V6.6c：连胜宝箱（每 7 天一次）+50
     if((S.streak.count||0) >= 7 && (S.streak.count||0) - (S.chest7||0) >= 7){
-      S.chest7 = S.streak.count; S.points += 50; save(); chestPop();
+      S.chest7 = S.streak.count; addPts(50); save(); chestPop();
     }
     // ★ V6.6c：每日 3 品软额度 → 休息提示（不硬锁，当天只提示一次）
     const todayN3 = Object.values(doneMap).filter(v=> v && v.date===td).length;
@@ -8152,7 +8165,7 @@ function skipTrace(){
     updateRoundUnlock(true);
     // 连胜宝箱
     if((S.streak.count||0) >= 7 && (S.streak.count||0) - (S.chest7||0) >= 7){
-      S.chest7 = S.streak.count; S.points += 50; save(); chestPop();
+      S.chest7 = S.streak.count; addPts(50); save(); chestPop();
     }
     // 每日 3 品休息提示
     const todayN3 = Object.values(doneMap).filter(v=> v && v.date===td).length;
@@ -8880,7 +8893,7 @@ function roleCardSVG(p){
   </svg>`;
 }
 // ★ V5.1 分享卡（日签式 · 朋友圈美学）：身份表达 + 成就感 + 审美 + 传播入口
-//   不复用金句卡，单独设计一套"留白+竖排金字+纸纹+印章+二维码"日签风格。
+//   V6.6n：方案C 重构——成就三项改左栏红色印章竖排（印泥感）+ 智慧莲花 7 槽；底部全固定（今日一句/今日收获/署名/扫码/二维码），与金句长度解耦；GAP 公式计入 BOXPAD 修根因（任意长度句子不再与底部重叠）
 function shareCardSVG(p){
   const W=1080, H=1920;
   const nick=(S.nick||"小书童").replace(/[<>&]/g,"");
@@ -8890,19 +8903,41 @@ function shareCardSVG(p){
   const days=S.streak.count||0;
   const doneN=Object.keys(S.done).length;
   const quote=p.goldenQuote||"";
-  // ★ V6.6m：日签卡金句升级为金色笔画骨架（与 R1/R2/R3/R4 金句卡统一视觉；自适应字数不侵入下方区，缺笔画数据自动回退楷体大字）
+  // ★ V6.6n：今日收获（S.dayInfo 跨天自动重置）+ 智慧莲花（累计答对数/5，点亮 7 槽）
+  const dayPts = (S.dayInfo&&S.dayInfo.date===dstr) ? (S.dayInfo.pts||0) : 0;
+  const lotusLit = Math.min(7, Math.floor((S.correctTotal||0)/5));
   const hans=[...quote].filter(c=>/[一-鿿]/.test(c));
   const N=hans.length;
-  const zoneTop=330, zoneBot=H-560;            // 金句允许纵带（下方留 560 给成就+二维码）
+  const zoneTop=330, zoneBot=H-620;            // 金句纵带（底部固定区 620 给 今日一句/收获/署名/扫码/二维码）
   const avail=zoneBot-zoneTop;
-  const GAP = N>0 ? Math.min(200, Math.floor((avail-80)/Math.max(N,1))) : 160;
+  // ★ V6.6n 修根因：GAP 迭代两次把 BOXPAD 计入，白框（N*GAP+2*BOXPAD）绝不超预留区，任意长度句子不与底部重叠
+  let GAP = N>0 ? Math.min(200, Math.floor((avail-80)/Math.max(N,1))) : 160;
+  for(let k=0;k<2;k++){
+    const SZk=Math.round(GAP*0.82), BPk=Math.round(SZk*0.23);
+    if(N>0 && N*GAP+2*BPk > avail-40) GAP = Math.max(40, Math.floor((avail-40-2*BPk)/N));
+  }
   const SZ  = Math.round(GAP*0.82);
   const BOXW = SZ*2+40, BOXPAD = Math.round(SZ*0.23);
   const midY = Math.round((zoneTop+zoneBot)/2);
   const gb = ghostQuoteBlock(quote, W/2, midY, SZ, GAP, BOXW, BOXPAD);  // ★ 复用四轮公共金骨架
   const chars = gb.svg;
-  const bottomY = gb.endY + 40;
-  // 日签底部：日期 + 成就
+  // ★ V6.6n：红色印泥感印章（成就三项）
+  const seal = (y, icon, txt)=>`<g transform="translate(205,${y})">
+      <rect x="-95" y="-34" width="190" height="66" rx="10" fill="#b03a2e" opacity=".10"/>
+      <rect x="-91" y="-30" width="182" height="58" rx="8" fill="none" stroke="#b03a2e" stroke-width="2.5" opacity=".8"/>
+      <text x="-52" y="10" text-anchor="middle" font-size="30">${icon}</text>
+      <text x="14" y="12" text-anchor="middle" font-size="25" fill="#8f2b1f" font-family="'KaiTi',serif">${txt}</text>
+    </g>`;
+  // ★ V6.6n：智慧莲花（亮=金实心 / 暗=浅灰轮廓）
+  const lotus = (x, lit)=>`<g transform="translate(${x},0)">
+      <ellipse cx="0" cy="-10" rx="6.5" ry="11" fill="${lit?"#c9a227":"#e9e0c8"}" stroke="#c9a227" stroke-width="1.5" opacity="${lit?1:.95}"/>
+      <ellipse cx="-8" cy="-1" rx="6.5" ry="11" fill="${lit?"#d8b13c":"#efe7d2"}" stroke="#c9a227" stroke-width="1.5" opacity="${lit?1:.95}"/>
+      <ellipse cx="8" cy="-1" rx="6.5" ry="11" fill="${lit?"#d8b13c":"#efe7d2"}" stroke="#c9a227" stroke-width="1.5" opacity="${lit?1:.95}"/>
+      <circle cx="0" cy="-3" r="4.2" fill="#f2e2b0"/>
+    </g>`;
+  let lotusRow="";
+  for(let k=0;k<7;k++) lotusRow += lotus(128+k*26, k<lotusLit);
+  const dayLine = dayPts>0 ? `今日一句 · ${dstr} · ✨ 今日收获 +${dayPts} 分` : `今日一句 · ${dstr}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="card-svg share-svg">
   <defs>
     <linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdf8ed"/><stop offset="1" stop-color="#f3e2c6"/></linearGradient>
@@ -8920,26 +8955,26 @@ function shareCardSVG(p){
   <line x1="${W/2-120}" y1="215" x2="${W/2+120}" y2="215" stroke="${colD}" stroke-width="2" opacity=".5"/>
   <!-- 日签感：当日字体句 -->
   ${chars}
-  <line x1="200" y1="${bottomY}" x2="${W-200}" y2="${bottomY}" stroke="${colD}" stroke-width="3" opacity=".5"/>
-  <text x="${W/2}" y="${bottomY+64}" text-anchor="middle" font-size="34" fill="#8a6a45" font-family="'KaiTi',serif" letter-spacing="6">今日一句 · ${dstr}</text>
-  <!-- 身份 / 成就信号 -->
-  <circle cx="${W/2-230}" cy="${bottomY+168}" r="52" fill="${col}" opacity=".14"/>
-  <text x="${W/2-230}" y="${bottomY+150}" text-anchor="middle" font-size="44">🏅</text>
-  <text x="${W/2-230}" y="${bottomY+192}" text-anchor="middle" font-size="26" font-family="'KaiTi',serif" fill="#6a5236">连续 ${days} 天</text>
-  <circle cx="${W/2}" cy="${bottomY+168}" r="52" fill="${col}" opacity=".14"/>
-  <text x="${W/2}" y="${bottomY+150}" text-anchor="middle" font-size="44">📚</text>
-  <text x="${W/2}" y="${bottomY+192}" text-anchor="middle" font-size="26" font-family="'KaiTi',serif" fill="#6a5236">已集 ${doneN}/32 品</text>
-  <circle cx="${W/2+230}" cy="${bottomY+168}" r="52" fill="${col}" opacity=".14"/>
-  <text x="${W/2+230}" y="${bottomY+150}" text-anchor="middle" font-size="44">✨</text>
-  <text x="${W/2+230}" y="${bottomY+192}" text-anchor="middle" font-size="26" font-family="'KaiTi',serif" fill="#6a5236">${S.points} 分</text>
-  <!-- 署名（印章感） -->
-  <rect x="${W/2-150}" y="${bottomY+238}" width="300" height="74" rx="14" fill="${col}" opacity=".12"/>
-  <text x="${W/2}" y="${bottomY+290}" text-anchor="middle" font-size="36" font-family="'KaiTi',serif" letter-spacing="6" fill="${colD}">— 「${esc(nick)}」 —</text>
+  <!-- 左栏：三枚印章成就（印泥感）+ 智慧莲花 -->
+  ${seal(382,"🏅","连续 "+days+" 天")}
+  ${seal(474,"📚","已集 "+doneN+"/32 品")}
+  ${seal(566,"✨",S.points+" 分")}
+  <text x="205" y="700" text-anchor="middle" font-size="24" fill="#8a6a45" font-family="'KaiTi',serif" letter-spacing="3">🌼 智慧莲花</text>
+  <g transform="translate(0,734)">${lotusRow}</g>
+  <text x="205" y="792" text-anchor="middle" font-size="19" fill="#a08a68" font-family="'KaiTi',serif">每答对 5 题点亮一朵 · ${lotusLit}/7</text>
+  <!-- 底部固定区（固定坐标，不随金句长度浮动） -->
+  <line x1="200" y1="1330" x2="${W-200}" y2="1330" stroke="${colD}" stroke-width="3" opacity=".5"/>
+  <text x="${W/2}" y="1398" text-anchor="middle" font-size="30" fill="#8a6a45" font-family="'KaiTi',serif" letter-spacing="4">${dayLine}</text>
+  <!-- 署名（红色印章感） -->
+  <g transform="translate(${W/2},1456)">
+    <rect x="-130" y="-31" width="260" height="62" rx="10" fill="#b03a2e" opacity=".10"/>
+    <rect x="-126" y="-27" width="252" height="54" rx="8" fill="none" stroke="#b03a2e" stroke-width="2.5" opacity=".85"/>
+    <text x="0" y="9" text-anchor="middle" font-size="30" fill="#8f2b1f" font-family="'KaiTi',serif" letter-spacing="6">— ${esc(nick)} —</text>
+  </g>
   <!-- 二维码体验入口 -->
+  <text x="${W/2}" y="1552" text-anchor="middle" font-size="24" font-family="'KaiTi',serif" letter-spacing="2" fill="#6a5236">扫码 · 一起来当小书童 · 每天一句金刚经</text>
   <rect x="${W/2-150}" y="${H-330}" width="300" height="300" rx="18" fill="#ffffff" stroke="${colD}" stroke-width="3"/>
   ${qrGlyph(W/2-105, H-285, 210)}
-  <text x="${W/2}" y="${H-500}" text-anchor="middle" font-size="30" font-family="'KaiTi',serif" letter-spacing="3" fill="#6a5236">扫码 · 一起来当小书童</text>
-  <text x="${W/2}" y="${H-460}" text-anchor="middle" font-size="22" font-family="'KaiTi',serif" fill="#a08a68">每天一句金刚经 · 和孩子一起精读</text>
 </svg>`;
 }
 // 二维码占位图形：绘制一个 QR 风格的点阵（可选锚点定位符），真实部署后替换为二维码图。
