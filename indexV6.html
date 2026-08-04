@@ -8413,7 +8413,7 @@ function showGallery(){
         <div class="cardbtns">
           <button class="mini" onclick="downloadCardPNG(${p.pin})">⬇ 下载</button>
           <button class="mini" onclick="printCard(${p.pin})">🖨 打印</button>
-          <button class="mini gold" title="分享日签卡" onclick="shareCardPreview(${p.pin})">📤 分享</button>
+          <button class="mini gold" title="分享日签卡" onclick="downloadSharePNG(${p.pin})">📤 分享</button>
         </div>`;
       gq.appendChild(c);
       const c2=document.createElement("div"); c2.className="gcard";
@@ -8636,7 +8636,7 @@ function pinCardsHTML(n){
   let h = "";
   if(S.r1_done[n]){
     h += `<div class="gcard ${rk.cls}"><div class="q">📿 金句卡</div>${cardSVG(p,'_'+p.pin)}
-      <div class="cardbtns"><button class="mini" onclick="downloadCardPNG(${p.pin})">⬇ 下载</button><button class="mini" onclick="printCard(${p.pin})">🖨 打印</button><button class="mini gold" onclick="shareCardPreview(${p.pin})">📤 分享</button></div></div>`;
+      <div class="cardbtns"><button class="mini" onclick="downloadCardPNG(${p.pin})">⬇ 下载</button><button class="mini" onclick="printCard(${p.pin})">🖨 打印</button><button class="mini gold" onclick="downloadSharePNG(${p.pin})">📤 分享</button></div></div>`;
     h += `<div class="gcard"><div class="q">🎭 角色卡</div>${roleCardSVG(p)}
       <div class="cardbtns"><button class="mini" onclick="downloadRolePNG(${p.pin})">⬇ 下载</button><button class="mini" onclick="printRole(${p.pin})">🖨 打印</button></div></div>`;
   }
@@ -8890,27 +8890,18 @@ function shareCardSVG(p){
   const days=S.streak.count||0;
   const doneN=Object.keys(S.done).length;
   const quote=p.goldenQuote||"";
-  // ★ 竖排金句：文本带固定高度（~552px），长短句都在同一安全区间内自适应字号并垂直居中。
-  //   短句（4字"敷座而坐"）：大留白大字；长句（10字如"如梦幻泡影如露亦如电"）：自动缩字但仍居中，
-  //   且永远不侵入下方日期/成就/署名/二维码区（根因修复"其他都覆盖"）。
-  let N=0; for(const ch of quote) if(/[一-鿿]/.test(ch)) N++;
-  const targetBlock=552;                       // 文本带目标高度
-  let step = N>0 ? Math.round(Math.max(52, Math.min(128, targetBlock/N))) : 96;
-  let charSize=Math.round(step*0.82);
-  let chars="", y=0;
-  const zoneTop=330, zoneBot=1020;            // 文本带允许占据的安全纵带
-  let blockH=N*step;
-  let top = Math.max(zoneTop, Math.round((zoneTop + (zoneBot-blockH))/2));
-  if(top+blockH>zoneBot) top=zoneTop;
-  y=top;
-  for(const ch of quote){
-    if(/[一-鿿]/.test(ch)){
-      chars+=`<text x="${W/2}" y="${y}" text-anchor="middle" font-size="${charSize}" fill="#3a2a18" font-family="'KaiTi','STKaiti','SimKai',serif" letter-spacing="8">${esc(ch)}</text>`; y+=step;
-    } else {
-      chars+=`<text x="${W/2}" y="${y}" text-anchor="middle" font-size="${Math.round(charSize*0.8)}" fill="#7a5a38" font-family="'KaiTi',serif">${esc(ch)}</text>`; y+=step-20;
-    }
-  }
-  const bottomY = y+70;
+  // ★ V6.6m：日签卡金句升级为金色笔画骨架（与 R1/R2/R3/R4 金句卡统一视觉；自适应字数不侵入下方区，缺笔画数据自动回退楷体大字）
+  const hans=[...quote].filter(c=>/[一-鿿]/.test(c));
+  const N=hans.length;
+  const zoneTop=330, zoneBot=H-560;            // 金句允许纵带（下方留 560 给成就+二维码）
+  const avail=zoneBot-zoneTop;
+  const GAP = N>0 ? Math.min(200, Math.floor((avail-80)/Math.max(N,1))) : 160;
+  const SZ  = Math.round(GAP*0.82);
+  const BOXW = SZ*2+40, BOXPAD = Math.round(SZ*0.23);
+  const midY = Math.round((zoneTop+zoneBot)/2);
+  const gb = ghostQuoteBlock(quote, W/2, midY, SZ, GAP, BOXW, BOXPAD);  // ★ 复用四轮公共金骨架
+  const chars = gb.svg;
+  const bottomY = gb.endY + 40;
   // 日签底部：日期 + 成就
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="card-svg share-svg">
   <defs>
