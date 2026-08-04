@@ -1,0 +1,29 @@
+# ===== 历史版本与备份（不纳入发布仓库）=====
+*备份*.html
+*调试*.html
+*_debug*.html
+*_m2log*
+*_r4test*
+*_test*.js
+V5*.html
+V5*.md
+V6复刻*.md
+V6-M3*.md
+V6多轮*.md
+WorkBuddy-*.md
+indexV3.html
+indexV4.html
+indexV5.html
+index.html
+V6.6k-*.html
+V6.6l-*.html
+会话备案录*.md
+_m2log.js
+_r4test.js
+
+# ===== 本地回测副本（避免缓存干扰，不入库）=====
+*手机回测版*.html
+
+# ===== 系统/编辑器 =====
+.DS_Store
+Thumbs.db
