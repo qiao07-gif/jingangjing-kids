@@ -377,6 +377,8 @@
     animation:floatUp linear forwards;}
   .flakep{position:fixed; bottom:-24px; z-index:79; pointer-events:none; border-radius:3px;
     animation:floatUp linear forwards;}
+  /* ★ 居中撒花容器（2026-08-06）：仅定位用，粒子挂里面；overflow:visible 必须（否则升起动画被裁），pointer-events:none 不挡点击 */
+  .burst-wrap{position:fixed; left:50%; top:0; transform:translateX(-50%); width:min(480px,92vw); height:100vh; overflow:visible; pointer-events:none; z-index:80;}
   @keyframes floatUp{
     0%{transform:translateY(0) rotate(0deg); opacity:0;}
     10%{opacity:1;}
@@ -6178,25 +6180,27 @@ function rollPoints(from, to){
 // 莲花花瓣 + 金色纸屑 庆祝
 
 /* V4: 五彩 confetti 瀑布（章节完成大庆祝） */
+// ★ 居中撒花容器懒创建（2026-08-06）：确保 .burst-wrap 存在并返回，供 lotusBurst/confettiRain 挂载
+function burstWrap(){ let w=document.querySelector('.burst-wrap'); if(!w){ w=document.createElement('div'); w.className='burst-wrap'; document.body.appendChild(w);} return w; }
 function confettiRain(n){
   const colors = ["#f2d98a","#e2b83a","#c4553f","#5b8a4e","#7fb3d9","#f08a5d","#ff6b6b","#ffd93d","#a29bfe","#fd79a8"];
   for(let i=0;i<n;i++){
     const el = document.createElement("div");
     el.className = "flakep";
-    el.style.left = Math.random()*100+"vw";
+    el.style.left = Math.random()*100+"%";   // ★ 2026-08-06：容器百分比，配合 .burst-wrap 居中集中（原 vw 全屏铺开）
     el.style.background = colors[Math.floor(Math.random()*colors.length)];
     el.style.width = (6+Math.random()*10)+"px";
     el.style.height = (8+Math.random()*14)+"px";
     el.style.animationDuration = (2+Math.random()*3)+"s";
     el.style.animationDelay = Math.random()*0.8+"s";
     el.style.borderRadius = Math.random()>0.5?"2px":"50%";
-    document.body.appendChild(el);
+    burstWrap().appendChild(el);   // ★ 2026-08-06：挂居中容器
     setTimeout(()=>el.remove(), 5000);
   }
 }
 
 function lotusBurst(n){
-  const n2 = n||22;
+  const n2 = n||22; const wrap = burstWrap();   // ★ 2026-08-06：粒子挂居中容器
   const emo = ["🪷","🌸","✨","⭐","🌟","💛","🌼"];
   for(let i=0;i<n2;i++){
     const el = document.createElement("div");
@@ -6205,7 +6209,7 @@ function lotusBurst(n){
     el.style.left = (Math.random()*100)+"%";
     el.style.animationDuration = (1.6+Math.random()*1.6)+"s";
     el.style.fontSize = (18+Math.random()*22)+"px";
-    document.body.appendChild(el);
+    wrap.appendChild(el);
     setTimeout(()=>el.remove(), 3400);
   }
   for(let i=0;i<(n2*1.4|0);i++){
@@ -6216,7 +6220,7 @@ function lotusBurst(n){
     p.style.background = ["#e2b83a","#f2d98a","#f08a5d","#d9a441"][Math.floor(Math.random()*4)];
     p.style.animationDuration = (1.8+Math.random()*1.8)+"s";
     p.style.animationDelay = (Math.random()*.4)+"s";
-    document.body.appendChild(p);
+    wrap.appendChild(p);
     setTimeout(()=>p.remove(), 4200);
   }
 }
@@ -7191,12 +7195,16 @@ function buildTrace(p){
   $("s3quote").textContent = quote;
   // ★ 先定画布尺寸，再按它算每个字的目标轨迹长，杜绝"窄屏收缩后 target 仍是旧大值、永远描不完"。
   traceSize = IS_TOUCH ? 340 : 300;   // 触屏默认更大，手指好落笔
+  const isWide = (window.innerWidth||0) >= 768;   // ★ 大屏/平板才允许放大，手机严格走原逻辑（2026-08-06）
   try{
     // 宽度约束（原逻辑）
     const avail = ($("s3hw").parentElement || document.body).clientWidth - 24; if(avail>0 && avail<traceSize) traceSize = Math.floor(avail);
+    // ★ 大屏/平板放大（2026-08-06）：仅宽屏生效，手机路径不变；上限460，容差/坐标全按sz%等比放大不串判定
+    if(isWide){ const big = Math.min(avail>0?avail:520, 460); if(big>traceSize) traceSize = big; }
     // ★ 高度约束（2026-08-02 调整）：页面已可滚动（见 gotoStep 注释），画布不必死塞一屏，
     //   但保持"尽量不超高"以少滚动；下限 240（橙橙反馈"改前大小正好、大一点好、小了体验不佳"）。
-    const vh = (window.innerHeight||660) - 430;
+    //   宽屏放宽常数 430→200（2026-08-06），避免把放大后的画布又裁回 340 以下（横屏内高约768-200=568>460 不触发）。
+    const vh = (window.innerHeight||660) - (isWide?200:430);
     if(vh>240 && vh<traceSize) traceSize = Math.floor(vh);
     if(traceSize<240) traceSize = 240;   // 下限：底字必须够大（8 岁孩子描红体验）
   }catch(e){}
@@ -7445,7 +7453,7 @@ function updateTraceProg(){
 }
 
 function setZoom(dir){
-  traceSize = Math.min(420, Math.max(220, traceSize + dir*70));
+  traceSize = Math.min(460, Math.max(220, traceSize + dir*70));   // ★ 上限同步放大(2026-08-06)，与宽屏自动上限460一致，避免放大后点"+"反而变小
   renderTraceChar();
   updateTraceProg();
 }
