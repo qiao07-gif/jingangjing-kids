@@ -5958,6 +5958,7 @@ const LOCK_SVG = '<svg class="lockico" viewBox="0 0 24 24" aria-hidden="true"><p
 const KEY = "vajra_fusion_v1";
 // ★ 2026-08-06：微信环境检测（微信内置浏览器禁用了 Web 朗读/下载/打印，引导用系统浏览器打开）
 const isWeChat = /micromessenger/i.test(navigator.userAgent || "");
+const isQQMobile = /QQBrowser/i.test(navigator.userAgent || "") && /(Android|iPhone|iPad|iPod|Mobile)/i.test(navigator.userAgent || "");
 let S = load();
 function load(){
   try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; }
@@ -6116,7 +6117,7 @@ function speakText(id){
   if(!txt || !txt.trim()) return;
   if(!speakOn){ toast("先打开朗读开关吧 🔈"); return; }
   try{
-    if(!("speechSynthesis" in window) || isWeChat){ toast(isWeChat ? "微信里暂不能朗读哦～点右上角···用浏览器打开就能听 🔈" : "这个设备不支持朗读"); return; }
+    if(!("speechSynthesis" in window) || isWeChat || isQQMobile){ toast(isWeChat ? "微信里暂不能朗读哦～点右上角···用浏览器打开就能听 🔈" : isQQMobile ? "QQ浏览器暂不能朗读～用 Edge 或 Chrome 打开本页就能听 🔈" : "这个浏览器暂不支持朗读，用 Edge 或 Chrome 打开就能听 🔈"); return; }
     const u = new SpeechSynthesisUtterance(txt.replace(/\s+/g,""));
     u.lang = "zh-CN"; u.rate = .92; u.pitch = 1.05;
     u.onerror = ()=>{ toast("朗读需要联网，连上网再试试～"); };
@@ -6964,7 +6965,7 @@ function readLightboard(btn, i){
   const full = ((q.sentence||"").replace(/____/g, q.answerWord||""));
   if(!full.trim()){ toast("这句读不了，换一句试试～"); return; }
   try{
-    if(!("speechSynthesis" in window) || isWeChat){ toast(isWeChat ? "微信里暂不能朗读哦～点右上角···用浏览器打开就能听 🔈" : "这个设备不支持朗读"); return; }
+    if(!("speechSynthesis" in window) || isWeChat || isQQMobile){ toast(isWeChat ? "微信里暂不能朗读哦～点右上角···用浏览器打开就能听 🔈" : isQQMobile ? "QQ浏览器暂不能朗读～用 Edge 或 Chrome 打开本页就能听 🔈" : "这个浏览器暂不支持朗读，用 Edge 或 Chrome 打开就能听 🔈"); return; }
     btn.disabled = true; btn.dataset.done = "1";
     btn.textContent = "🔊 正在念…";
     const u = new SpeechSynthesisUtterance(full.replace(/\s+/g,""));
