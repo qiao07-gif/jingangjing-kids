@@ -5956,6 +5956,8 @@ const DATA = {
 // V6.6d：SVG 锁图标（emoji 🔒 在安卓小字号下渲染不可见，统一改内联 SVG，任意设备渲染一致）
 const LOCK_SVG = '<svg class="lockico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3H9zm3 3a1.5 1.5 0 0 1 1.5 1.5c0 .6-.35 1.1-.86 1.34V17a.64.64 0 0 1-1.28 0v-1.16c-.51-.24-.86-.74-.86-1.34A1.5 1.5 0 0 1 12 13z"/></svg>';
 const KEY = "vajra_fusion_v1";
+// ★ 2026-08-06：微信环境检测（微信内置浏览器禁用了 Web 朗读/下载/打印，引导用系统浏览器打开）
+const isWeChat = /micromessenger/i.test(navigator.userAgent || "");
 let S = load();
 function load(){
   try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; }
@@ -6114,7 +6116,7 @@ function speakText(id){
   if(!txt || !txt.trim()) return;
   if(!speakOn){ toast("先打开朗读开关吧 🔈"); return; }
   try{
-    if(!("speechSynthesis" in window)){ toast("这个设备不支持朗读"); return; }
+    if(!("speechSynthesis" in window) || isWeChat){ toast(isWeChat ? "微信里暂不能朗读哦～点右上角···用浏览器打开就能听 🔈" : "这个设备不支持朗读"); return; }
     const u = new SpeechSynthesisUtterance(txt.replace(/\s+/g,""));
     u.lang = "zh-CN"; u.rate = .92; u.pitch = 1.05;
     u.onerror = ()=>{ toast("朗读需要联网，连上网再试试～"); };
@@ -6962,7 +6964,7 @@ function readLightboard(btn, i){
   const full = ((q.sentence||"").replace(/____/g, q.answerWord||""));
   if(!full.trim()){ toast("这句读不了，换一句试试～"); return; }
   try{
-    if(!("speechSynthesis" in window)){ toast("这个设备不支持朗读"); return; }
+    if(!("speechSynthesis" in window) || isWeChat){ toast(isWeChat ? "微信里暂不能朗读哦～点右上角···用浏览器打开就能听 🔈" : "这个设备不支持朗读"); return; }
     btn.disabled = true; btn.dataset.done = "1";
     btn.textContent = "🔊 正在念…";
     const u = new SpeechSynthesisUtterance(full.replace(/\s+/g,""));
@@ -8420,6 +8422,7 @@ function downloadSharePNG(n){
 }
 // V2：通用下载（SVG → canvas → PNG 9:16）
 function downloadSVG(svg, fname){
+  if(isWeChat){ toast("微信里不能直接存图哦～点右上角···用浏览器打开就能保存 💾"); return; }
   const blob = new Blob([svg], {type:"image/svg+xml;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const img = new Image();
@@ -8552,6 +8555,7 @@ function downloadR3WorkPNG(time){
   downloadSVG(r3WorkSVG(w), `金刚经_第${w.pin}品_作品卡_${(S.nick||"小行者").replace(/[<>&]/g,"")}.png`);
 }
 function printSVG(svg){
+  if(isWeChat){ toast("微信里不能直接打印哦～点右上角···用浏览器打开就能打印 🖨️"); return; }
   const pa=$("printArea"); pa.innerHTML=svg; pa.classList.add("show");
   setTimeout(()=>{ window.print(); setTimeout(()=> pa.classList.remove("show"),400); },150);
 }
@@ -8569,6 +8573,7 @@ function downloadRolePNG(n){
   downloadSVG(roleCardSVG(p), `金刚经_第${p.pin}品_角色卡_${(S.nick||"小书童").replace(/[<>&]/g,"")}.png`);
 }
 function printCard(n){
+  if(isWeChat){ toast("微信里不能直接打印哦～点右上角···用浏览器打开就能打印 🖨️"); return; }
   const p = DATA.pins.find(x=>x.pin===n);
   if(!p) return;
   const pa = $("printArea");
@@ -8577,6 +8582,7 @@ function printCard(n){
   setTimeout(()=>{ window.print(); setTimeout(()=> pa.classList.remove("show"), 400); }, 150);
 }
 function printRole(n){
+  if(isWeChat){ toast("微信里不能直接打印哦～点右上角···用浏览器打开就能打印 🖨️"); return; }
   const p = DATA.pins.find(x=>x.pin===n);
   if(!p) return;
   const pa = $("printArea");
