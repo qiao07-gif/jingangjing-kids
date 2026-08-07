@@ -4,7 +4,7 @@
 
 ## English / 英文简介
 
-**Diamond Sutra Interactive Reader for Kids** — a single-file, offline web app that helps children (ages 8–9) read and enjoy the *Diamond Sutra* (金刚经), one of the most important scriptures in Chinese Buddhism.
+**Diamond Sutra Interactive Reader for Kids** — a single-file, offline web app that helps children and families read and enjoy the *Diamond Sutra* (金刚经), one of the most important scriptures in Chinese Buddhism.
 
 ▶ **Try it online:** https://qiao07-gif.github.io/jingangjing-kids
 
