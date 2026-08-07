@@ -2,6 +2,19 @@
 
 # 金刚经儿童精读融合版 · V6.6l
 
+## English / 英文简介
+
+**Diamond Sutra Interactive Reader for Kids** — a single-file, offline web app that helps children (ages 8–9) read and enjoy the *Diamond Sutra* (金刚经), one of the most important scriptures in Chinese Buddhism.
+
+▶ **Try it online:** https://qiao07-gif.github.io/jingangjing-kids
+
+- Trace golden-brush Chinese characters — stroke-order practice with zero font files
+- 32 chapters, each with a kid-friendly summary, reflection, and quiz
+- Four-round learning loop: meet → discover → create → teach
+- Works offline — just open `indexV6.html` in any browser
+
+---
+
 一款面向儿童的《金刚经》精读单文件 Web 应用，打开即玩，无需联网、无需安装。
 
 - **作者**：橙橙（晞橙橙晞）
