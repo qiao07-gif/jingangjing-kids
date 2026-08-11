@@ -245,6 +245,7 @@
   .tracebox .tracecanvas{position:absolute; inset:0; z-index:2; display:block; cursor:crosshair; background:transparent;}
   .tracebox.done-char .tracecanvas{pointer-events:none;}
   .tracebox.done-char{border-color:var(--good); box-shadow:0 0 0 3px var(--gold2), 0 0 26px rgba(231,199,90,.85);}
+  /* ★ 2026-08-12 灰度试点(仅第一章)：描完去✓，改为 A 字形柔光·持续微光（字自己柔柔发光，Canvas shadowBlur），无 DOM 光晕层 */
   .tracepy{font-size:15px; color:var(--ink2); margin-top:8px; letter-spacing:3px; height:22px;}
   /* ★ 2026-08-02 描红页字体放大（橙橙反馈"字体大点、体验好"）：仅限 #step3，不影响其它页面 */
   #step3 .quotebig{font-size:28px;}
@@ -826,7 +827,7 @@ window.CHAR_DATA = {"一": {"strokes": ["M 518 382 Q 572 385 623 389 Q 758 399 9
 <script>
 const DATA = {
  "title": "金刚经儿童精读笔记",
- "basedOn": "姚秦三藏法师鸠摩罗什译本（李罕诵念版底本）",
+ "basedOn": "姚秦三藏法师鸠摩罗什译本（龙藏底本）",
  "targetAge": "小学三年级（8-9岁）",
  "languageStyle": "所有佛教术语翻成孩子能懂的话，用比喻和故事解释抽象概念",
  "translationRules": {
@@ -7438,7 +7439,7 @@ function onCharDone(idx){
 function onCharDoneVisual(){
   const box = traceBox || $("s3hw");
   box.classList.add("done-char");
-  // 底字重绘为金色（Canvas上）—— V6.6h：描字面板回退为 V6.6f 原样（金色系统楷体字）；金色笔画骨架仅保留在卡片输出（cardSVG 第 1 品）
+  // 底字重绘为金色（Canvas上）—— V6.6h：金色系统楷体字（100%保持，0.82×格子）
   const cv = box.querySelector(".tracecanvas");
   if(cv && traceCtx){
     const dpr2 = window.devicePixelRatio||1;
@@ -7448,17 +7449,25 @@ function onCharDoneVisual(){
     traceCtx.setTransform(dpr2,0,0,dpr2,0,0);
     traceCtx.font = `${Math.round(traceSize*0.82)}px "KaiTi","STKaiti","SimKai","楷体",serif`;
     traceCtx.textAlign = "center"; traceCtx.textBaseline = "middle";
+    if(curPin === 1){
+      traceCtx.shadowColor = "#c9a227";
+      traceCtx.shadowBlur = 16;   // A 字形柔光·持续微光：字自己柔柔发光
+    }
     traceCtx.fillStyle = "#c9a227";
     traceCtx.fillText(traceChars[traceIdx]?.ch||"", traceSize/2, traceSize/2);
+    traceCtx.shadowBlur = 0;
     traceCtx.globalAlpha = .6;
     traceCtx.restore();
   }
-  if(!box.querySelector(".hwfall")){
-    const ok = document.createElement("div");
-    ok.className = "hwfall";
-    ok.style.cssText = `position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; pointer-events:none; font-size:${Math.round(traceSize*0.38)}px; color:var(--good); font-weight:700;`;
-    ok.textContent = "✓";
-    box.appendChild(ok);
+  // ★ 2026-08-12 灰度试点：仅第一章(品1)走 A 字形柔光·持续微光——金字已在上方 Canvas 重绘时加 shadowBlur 柔光，此处不再加圆形光晕 DOM、也不加绿✓；其余品保持旧绿✓
+  if(curPin !== 1){
+    if(!box.querySelector(".hwfall")){
+      const ok = document.createElement("div");
+      ok.className = "hwfall";
+      ok.style.cssText = `position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; pointer-events:none; font-size:${Math.round(traceSize*0.38)}px; color:var(--good); font-weight:700;`;
+      ok.textContent = "✓";
+      box.appendChild(ok);
+    }
   }
 }
 
