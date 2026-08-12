@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   金刚经 · 儿童精读 V6 M1（单文件离线版）
   V6.1 = V6 + 「关于与授权」弹窗（2026-08-03 新增，开源合规）
@@ -7071,6 +7071,8 @@ function gotoStep(step){
     });
     if(step===4) buildCollect();
     if(step===3){
+      // ★ 2026-08-12 修复：step3 可见后按真实宽度重算描字框（仅首进品1框偏小时生效，品2起尺寸一致直接跳过）
+      requestAnimationFrame(()=>{ try{ relayoutTrace(); }catch(e){ console.error("[relayoutTrace]", e); } });
       // ★ 2026-08-02 滚动策略调整（橙橙反馈"底部按钮看不见、下拉卡住"）：
       //   不再给 body 加 tracelock 锁死整页滚动——画布/画布容器(.tracebox)已有 touch-action:none，
       //   描字时手指在画布上不会拉动页面；非写字区（金句/按钮/空白）保持可滚动，
@@ -7245,6 +7247,37 @@ function buildTrace(p){
   renderTraceChar();
   updateTraceProg();
   renderTraceDots();
+}
+
+// ★ 2026-08-12 修复描字框偏小（仅第一品首进触发）：openPin 内 buildTrace 跑在 step3 隐藏态，
+//   量到 clientWidth 偏小→traceSize 取默认300；此处等 step3 真正可见后按真实宽度重算。
+//   关键：骨架模型 model 也是按 traceSize 构建的（buildGhostModel 把坐标 bake 进 traceSize 坐标系），
+//   尺寸变了必须重建当前品所有未描完字的 model，否则"显示大框但判定区域还是旧小框→描字错位"。
+//   幂等保护：traceSize 没变就直接 return，对第二品及之后零影响。
+function relayoutTrace(){
+  const box = $("s3hw"); if(!box) return;
+  if($("step3").classList.contains("hidden")) return; // 仅可见时量
+  if(!traceTotal) return;                              // 无字不处理
+  const old = traceSize;
+  traceSize = IS_TOUCH ? 340 : 300;
+  const isWide = (window.innerWidth||0) >= 768;
+  try{
+    const avail = (box.parentElement || document.body).clientWidth - 24;
+    if(avail>0 && avail<traceSize) traceSize = Math.floor(avail);
+    if(isWide){ const big = Math.min(avail>0?avail:520, 460); if(big>traceSize) traceSize = big; }
+    const vh = (window.innerHeight||660) - (isWide?200:430);
+    if(vh>240 && vh<traceSize) traceSize = Math.floor(vh);
+    if(traceSize<240) traceSize = 240;
+  }catch(e){}
+  if(traceSize === old) return;                        // 尺寸没变→跳过（品2起走这里，不重建不重绘）
+  for(let i=0;i<traceChars.length;i++){
+    const c = traceChars[i];
+    if(!c.hasData) continue;
+    const cd = (window.CHAR_DATA && window.CHAR_DATA[c.ch]);
+    if(cd && (cd.medians||cd.strokes)){ c.model = buildGhostModel(c.ch, cd, traceSize); c.needLen = c.model.length*traceSize*0.5; }
+  }
+  renderTraceChar();
+  updateTraceProg();
 }
 
 // V2：每个字的进度点（●●○）
@@ -7449,28 +7482,24 @@ function onCharDoneVisual(){
     traceCtx.setTransform(dpr2,0,0,dpr2,0,0);
     traceCtx.font = `${Math.round(traceSize*0.82)}px "KaiTi","STKaiti","SimKai","楷体",serif`;
     traceCtx.textAlign = "center"; traceCtx.textBaseline = "middle";
-    if(curPin === 1){
-      traceCtx.shadowColor = "#c9a227";
-      traceCtx.shadowBlur = 16;   // A 字形柔光·持续微光：字自己柔柔发光
-    }
+    // 描完：所有品统一重绘为金色系统楷体字（100%保持，0.82×格子）
     traceCtx.fillStyle = "#c9a227";
     traceCtx.fillText(traceChars[traceIdx]?.ch||"", traceSize/2, traceSize/2);
     traceCtx.shadowBlur = 0;
     traceCtx.globalAlpha = .6;
     traceCtx.restore();
   }
-  // ★ 2026-08-12 灰度试点：仅第一章(品1)走 A 字形柔光·持续微光——金字已在上方 Canvas 重绘时加 shadowBlur 柔光，此处不再加圆形光晕 DOM、也不加绿✓；其余品保持旧绿✓
-  if(curPin !== 1){
-    if(!box.querySelector(".hwfall")){
-      const ok = document.createElement("div");
-      ok.className = "hwfall";
-      ok.style.cssText = `position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; pointer-events:none; font-size:${Math.round(traceSize*0.38)}px; color:var(--good); font-weight:700;`;
-      ok.textContent = "✓";
-      box.appendChild(ok);
-    }
+  // 描完：所有品描完均出绿✓（已恢复品1绿✓，与品2一致）
+  if(!box.querySelector(".hwfall")){
+    const ok = document.createElement("div");
+    ok.className = "hwfall";
+    ok.style.cssText = `position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; pointer-events:none; font-size:${Math.round(traceSize*0.38)}px; color:var(--good); font-weight:700;`;
+    ok.textContent = "✓";
+    box.appendChild(ok);
   }
 }
 
+// ★ 2026-08-12：品1 的星光闪/柔光晕灰度方案已移除——品1 现统一为干净金字(0.82满格)、不出绿✓、无动画，与其余品观感一致（仅差别在绿✓）。
 function updateTraceProg(){
   $("s3prog").textContent = traceTotal===0
     ? "这一品没有可描的字～直接收集吧"

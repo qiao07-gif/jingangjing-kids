@@ -7489,15 +7489,13 @@ function onCharDoneVisual(){
     traceCtx.globalAlpha = .6;
     traceCtx.restore();
   }
-  // 描完：仅品1 不出绿✓（橙橙认为绿✓体验不佳）；其余品保持旧绿✓
-  if(curPin !== 1){
-    if(!box.querySelector(".hwfall")){
-      const ok = document.createElement("div");
-      ok.className = "hwfall";
-      ok.style.cssText = `position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; pointer-events:none; font-size:${Math.round(traceSize*0.38)}px; color:var(--good); font-weight:700;`;
-      ok.textContent = "✓";
-      box.appendChild(ok);
-    }
+  // 描完：所有品描完均出绿✓（已恢复品1绿✓，与品2一致）
+  if(!box.querySelector(".hwfall")){
+    const ok = document.createElement("div");
+    ok.className = "hwfall";
+    ok.style.cssText = `position:absolute; inset:0; z-index:3; display:flex; align-items:center; justify-content:center; pointer-events:none; font-size:${Math.round(traceSize*0.38)}px; color:var(--good); font-weight:700;`;
+    ok.textContent = "✓";
+    box.appendChild(ok);
   }
 }
 
