@@ -7295,7 +7295,7 @@ function renderTraceDots(){
 }
 
 function renderTraceChar(){
-  const box = $("s3hw"); box.innerHTML="";
+  const box = $("s3hw"); const _prevOk = box.querySelector(".hwfall"); if(_prevOk) _prevOk.remove();
   box.classList.remove("done-char");
   traceBox = box;
   const okbtn = $("s3ok");
@@ -7323,7 +7323,7 @@ function renderTraceChar(){
   // 底字画在Canvas上，同坐标系，手机不会串位
   // 2026-08-03 防抖修复：复用 canvas 节点，不再每字整块重建（QQ X5 内核重建瞬间丢帧抖动）
   let cv = box.querySelector(".tracecanvas");
-  if(!cv){ box.innerHTML = `<canvas class="tracecanvas"></canvas>`; cv = box.querySelector(".tracecanvas"); }
+  if(!cv){ cv = document.createElement("canvas"); cv.className="tracecanvas"; box.appendChild(cv); }
   initTraceCanvas(cv, item.ch, traceSize);
   if(traceCompleted[traceIdx]) onCharDoneVisual();
 }
@@ -7377,6 +7377,8 @@ function initTraceCanvas(cv, ghostChar, size){
   ctx.lineWidth = autoTraceW(cssSize, ghostChar);   // 2026-08-02 V5迭代：笔触粗细按笔画数自适应（密字细、简字粗）
   ctx.shadowColor = "rgba(212,167,44,.5)"; ctx.shadowBlur = 10;
   traceCtx = ctx;
+  cv._cssSize = cssSize;
+  if(cv._bound) return; cv._bound = true;
   let drawing=false, lastX=0, lastY=0, penLen=0, lastTouchT=0;
   // ★ 每帧实时读取 Canvas 屏幕坐标，滑屏/地址栏伸缩/弹性滚动后不串位；
   //   用 CSS 像素直出，与绘制坐标系完全同源。
@@ -7404,10 +7406,10 @@ function initTraceCanvas(cv, ghostChar, size){
     if(!counted) return;                       // touchcancel 直接安全结束，不判定
     if(e.type==="mouseup" && Date.now()-lastTouchT < 500) return;  // 触摸后补发的合成 mouseup，忽略
     // 太短的一下（位移<画布7%）当误触点按，忽略
-    if(penLen < cssSize*0.07){ $("s3prog").textContent = `按在字上画一笔～要画出笔画才算哦`; return; }
+    if(penLen < cv._cssSize*0.07){ $("s3prog").textContent = `按在字上画一笔～要画出笔画才算哦`; return; }
     const model = __curModel;
     if(model && model.length){
-      const hit = strokeMatch(__tracePts, model, cssSize);
+      const hit = strokeMatch(__tracePts, model, cv._cssSize);
       if(hit){
         // ——修复① 近邻联动点亮（2026-08-02）：解/福这类笔画黏连字，
         //   一根骨架被相邻长笔"包裹"时，孩子描这根，把距它 <5px 的未点亮近邻骨架一起点亮，
@@ -7442,7 +7444,7 @@ function initTraceCanvas(cv, ghostChar, size){
       }
     } else {
       // 无骨架数据时的兜底：按距离门槛（保持宽容，避免无数据字卡死）
-      const needLen = (traceChars[traceIdx] && traceChars[traceIdx].needLen) || (cssSize*2);
+      const needLen = (traceChars[traceIdx] && traceChars[traceIdx].needLen) || (cv._cssSize*2);
       if(penLen >= needLen){ onCharDone(traceIdx); }
       else { $("s3prog").textContent = `写得不错！这个字再描几笔就完成 ✨`; }
     } };
