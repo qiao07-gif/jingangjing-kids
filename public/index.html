@@ -7072,6 +7072,10 @@ function gotoStep(step){
     if(step===4) buildCollect();
     if(step===3){
       // ★ 2026-08-12 修复：step3 可见后按真实宽度重算描字框（仅首进品1框偏小时生效，品2起尺寸一致直接跳过）
+            // ★ 2026-08-14 修复：QQ(X5)内核会把进页的 rAF 推迟到首笔 touchstart 才 flush，致描第一笔时描字框+底纹下移一格。
+      //   改法：进页先强制同步回流(读 offsetHeight flush layout)，再【同步】调 relayoutTrace 锁死尺寸；原 rAF 保留作兜底(幂等不闪)。
+      try{ const _b=$("s3hw"); if(_b){ void _b.offsetHeight; void (_b.parentElement?_b.parentElement.clientWidth:0); } }catch(e){}
+      try{ relayoutTrace(); }catch(e){ console.error("[relayoutTrace]", e); }
       requestAnimationFrame(()=>{ try{ relayoutTrace(); }catch(e){ console.error("[relayoutTrace]", e); } });
       // ★ 2026-08-02 滚动策略调整（橙橙反馈"底部按钮看不见、下拉卡住"）：
       //   不再给 body 加 tracelock 锁死整页滚动——画布/画布容器(.tracebox)已有 touch-action:none，
